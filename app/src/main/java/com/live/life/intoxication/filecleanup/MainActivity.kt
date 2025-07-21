@@ -14,6 +14,10 @@ import com.live.life.intoxication.filecleanup.one.SetActivity
 import com.live.life.intoxication.filecleanup.utils.PermissionHelper
 import java.text.DecimalFormat
 import kotlin.math.round
+import android.content.Context
+import android.os.storage.StorageManager
+import android.app.usage.StorageStatsManager
+import android.text.format.Formatter
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -54,17 +58,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateStorageInfo() {
         try {
-            val stat = StatFs(Environment.getExternalStorageDirectory().path)
-            val blockSize = stat.blockSizeLong
-            val totalBlocks = stat.blockCountLong
-            val availableBlocks = stat.availableBlocksLong
-
-            val totalBytes = totalBlocks * blockSize
-            val availableBytes = availableBlocks * blockSize
+            // 方法1：使用StorageManager获取更准确的总容量（API 18+）
+            val totalBytes = getTotalStorageSpace()
+            val availableBytes = getAvailableStorageSpace()
             val usedBytes = totalBytes - availableBytes
 
             // 计算使用百分比
-            val usagePercentage = ((usedBytes.toFloat() / totalBytes.toFloat()) * 100).toInt()
+            val usagePercentage = if (totalBytes > 0) {
+                ((usedBytes.toFloat() / totalBytes.toFloat()) * 100).toInt()
+            } else 0
 
             // 更新UI
             updateStorageDisplay(totalBytes, usedBytes, availableBytes, usagePercentage)
@@ -76,6 +78,59 @@ class MainActivity : AppCompatActivity() {
             binding.tvUserNum.text = "0"
             binding.tvProNum.text = "0"
             binding.progressUser.progress = 0
+        }
+    }
+
+    /**
+     * 获取设备总存储空间（更准确的方法）
+     */
+    private fun getTotalStorageSpace(): Long {
+        return try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR2) {
+                // 使用StorageManager获取主存储的总容量
+                val storageManager = getSystemService(Context.STORAGE_SERVICE) as StorageManager
+                val storageVolume = storageManager.primaryStorageVolume
+
+                // 对于API 24+，可以使用StorageStatsManager
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    val storageStatsManager = getSystemService(Context.STORAGE_STATS_SERVICE) as StorageStatsManager
+                    val uuid = StorageManager.UUID_DEFAULT
+                    storageStatsManager.getTotalBytes(uuid)
+                } else {
+                    // 回退到StatFs方法，但使用根目录
+                    val stat = StatFs(Environment.getDataDirectory().path)
+                    stat.blockCountLong * stat.blockSizeLong
+                }
+            } else {
+                // 旧版本Android的回退方法
+                val stat = StatFs(Environment.getExternalStorageDirectory().path)
+                stat.blockCountLong * stat.blockSizeLong
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // 如果所有方法都失败，使用原来的方法作为回退
+            val stat = StatFs(Environment.getExternalStorageDirectory().path)
+            stat.blockCountLong * stat.blockSizeLong
+        }
+    }
+
+    /**
+     * 获取可用存储空间
+     */
+    private fun getAvailableStorageSpace(): Long {
+        return try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                val storageStatsManager = getSystemService(Context.STORAGE_STATS_SERVICE) as StorageStatsManager
+                val uuid = StorageManager.UUID_DEFAULT
+                storageStatsManager.getFreeBytes(uuid)
+            } else {
+                val stat = StatFs(Environment.getExternalStorageDirectory().path)
+                stat.availableBlocksLong * stat.blockSizeLong
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            val stat = StatFs(Environment.getExternalStorageDirectory().path)
+            stat.availableBlocksLong * stat.blockSizeLong
         }
     }
 
@@ -108,11 +163,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun formatStorageSize(bytes: Long): Pair<String, String> {
-        // 使用二进制计算（1024）保持与Android系统一致
-        val gb = 1024L * 1024L * 1024L
-        val mb = 1024L * 1024L
-        val kb = 1024L
-
+        val gb = 1000L * 1000L * 1000L
+        val mb = 1000L * 1000L
+        val kb = 1000L
         return when {
             bytes >= gb -> {
                 val size = round((bytes.toDouble() / gb) * 100) / 100

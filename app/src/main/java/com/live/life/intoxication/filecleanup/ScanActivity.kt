@@ -2,6 +2,7 @@ package com.live.life.intoxication.filecleanup
 
 import android.app.AlertDialog
 import android.app.ProgressDialog
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -16,6 +17,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.live.life.intoxication.filecleanup.databinding.ActivityScanBinding
+import com.live.life.intoxication.filecleanup.one.ScanLoadActivity
 import com.live.life.intoxication.filecleanup.scanner.FileScanner
 import com.live.life.intoxication.filecleanup.utils.PermissionHelper
 import kotlinx.coroutines.*
@@ -61,11 +63,6 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
     }
 
     private fun initializeStates() {
-        categoryExpandStates["App Cache"] = false
-        categoryExpandStates["Apk Files"] = false
-        categoryExpandStates["Log Files"] = false
-        categoryExpandStates["AD Junk"] = false
-        categoryExpandStates["Temp Files"] = false
 
         categorySelectStates["App Cache"] = true
         categorySelectStates["Apk Files"] = true
@@ -192,31 +189,37 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         }
     }
 
+    // ... existing code ...
     private fun toggleCategorySelection(categoryName: String, statusIcon: ImageView) {
         val isCurrentlySelected = categorySelectStates[categoryName] ?: true
         val newSelectState = !isCurrentlySelected
         categorySelectStates[categoryName] = newSelectState
-
+        Log.e("TAG", "toggleCategorySelection-1: ${isCurrentlySelected}", )
         // 获取该分类下的所有文件
         val categoryFiles = getCategoryFiles(categoryName)
 
         Log.d("CategorySelection", "Processing $categoryName: ${categoryFiles.size} files")
 
+        // 确保所有文件状态一致
         categoryFiles.forEach { file ->
-            // 先从selectedFiles中移除该文件的所有实例
-            selectedFiles.removeAll { it.path == file.path }
-
-            // 设置新的选中状态
             file.isSelected = newSelectState
-
-            // 如果新状态是选中，则添加到selectedFiles
-            if (file.isSelected) {
-                selectedFiles.add(file)
-                Log.d("CategorySelection", "Added file: ${file.name} (${file.path})")
-            } else {
-                Log.d("CategorySelection", "Removed file: ${file.name} (${file.path})")
-            }
         }
+
+        // 重新计算选中文件
+        selectedFiles.clear()
+        scanResult?.let { result ->
+            listOf(
+                result.appCache,
+                result.apkFiles,
+                result.logFiles,
+                result.adJunk,
+                result.tempFiles,
+                result.otherFiles
+            ).flatten()
+                .filter { it.isSelected }
+                .forEach { selectedFiles.add(it) }
+        }
+        Log.e("TAG", "toggleCategorySelection-2: ${newSelectState}", )
 
         // 更新UI图标
         statusIcon.setImageResource(
@@ -225,6 +228,9 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
 
         // 更新清理按钮
         updateCleanButton()
+
+        // 更新分类大小显示
+        updateCategorySizes()
 
         // 如果分类展开了，更新详情中的选中状态
         if (categoryExpandStates[categoryName] == true) {
@@ -240,6 +246,8 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         Log.d("CategorySelection", "Selected file paths: ${selectedFiles.map { it.path }}")
         Log.d("CategorySelection", "Selected size: ${formatFileSize(selectedFiles.sumOf { it.size })}")
     }
+// ... existing code ...
+
     private fun getCategoryFiles(categoryName: String): List<FileScanner.JunkFile> {
         val result = scanResult ?: return emptyList()
         return when (categoryName) {
@@ -273,15 +281,15 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         }
 
         // 添加文件列表
-        categoryFiles.take(50).forEach { file -> // 限制显示数量避免卡顿
+        categoryFiles.take(500).forEach { file -> // 限制显示数量避免卡顿
             val fileView = createFileItemView(file, categoryName)
             detailsLayout.addView(fileView)
         }
 
         // 如果文件数量太多，显示提示
-        if (categoryFiles.size > 50) {
+        if (categoryFiles.size > 500) {
             val moreView = TextView(this).apply {
-                text = "... There are still ${categoryFiles. size -50} files available"
+                text = "... There are still ${categoryFiles. size -500} files available"
                 textSize = 12f
                 setTextColor(resources.getColor(android.R.color.darker_gray, null))
                 setPadding(48, 16, 16, 16)
@@ -290,6 +298,7 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         }
     }
 
+    // ... existing code ...
     private fun createFileItemView(file: FileScanner.JunkFile, categoryName: String): View {
         val itemView = LayoutInflater.from(this).inflate(R.layout.item_junk_file, null)
 
@@ -306,24 +315,32 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         itemView.setOnClickListener {
             Log.d("FileClick", "Clicked file: ${file.name} (current selected: ${file.isSelected})")
 
-            // 先从selectedFiles中移除该文件的所有实例
-            val removedCount = selectedFiles.removeAll { it.path == file.path }
-            Log.d("FileClick", "Removed $removedCount instances of ${file.path}")
-
-            // 切换选中状态
+            // 直接切换文件选中状态
             file.isSelected = !file.isSelected
-            ivFileStatus.setImageResource(if (file.isSelected) R.drawable.ic_check else R.drawable.ic_check_circle)
 
-            // 如果选中，添加到selectedFiles
-            if (file.isSelected) {
-                selectedFiles.add(file)
-                Log.d("FileClick", "Added file to selected: ${file.path}")
+            // 同步更新分类选中状态
+            updateCategorySelectionStatus(categoryName)
+
+            // 重新计算所有选中文件
+            selectedFiles.clear()
+            scanResult?.let { result ->
+                listOf(
+                    result.appCache,
+                    result.apkFiles,
+                    result.logFiles,
+                    result.adJunk,
+                    result.tempFiles,
+                    result.otherFiles
+                ).flatten()
+                    .filter { it.isSelected }
+                    .forEach { selectedFiles.add(it) }
             }
 
-            Log.d("FileClick", "After click - selectedFiles size: ${selectedFiles.size}")
-
-            updateCategorySelectionStatus(categoryName)
+            // 更新UI
+            ivFileStatus.setImageResource(if (file.isSelected) R.drawable.ic_check else R.drawable.ic_check_circle)
             updateCleanButton()
+
+            Log.d("FileClick", "After click - selectedFiles size: ${selectedFiles.size}")
         }
 
         return itemView
@@ -334,6 +351,7 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         val selectedCount = categoryFiles.count { it.isSelected }
         val totalCount = categoryFiles.size
 
+        // 更新分类选中状态
         categorySelectStates[categoryName] = selectedCount == totalCount
 
         // 更新分类选中图标
@@ -351,6 +369,8 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
             else R.drawable.ic_check_circle
         )
     }
+// ... existing code ...
+
 
     private fun startScanning() {
         isScanning = true
@@ -374,6 +394,11 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
                 scanResult = fileScanner.startScan(this@ScanActivity)
                 withContext(Dispatchers.Main) {
                     updateCategorySizes()
+                    binding.ivAppCacheStatus.setImageResource(R.drawable.ic_check)
+                    binding.ivAppFileStatus.setImageResource(R.drawable.ic_check)
+                    binding.ivLogFileStatus.setImageResource(R.drawable.ic_check)
+                    binding.ivAdJunkStatus.setImageResource(R.drawable.ic_check)
+                    binding.ivTempFilesStatus.setImageResource(R.drawable.ic_check)
                 }
             } catch (e: Exception) {
                 onError("The scan failed: ${e.message}")
@@ -472,14 +497,13 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
     }
 
     private fun updateCategorySizes() {
-        Log.e("TAG", "updateCategorySizes: ${scanResult==null}", )
         val result = scanResult ?: return
-        Log.e("TAG", "updateCategorySizes: ${formatFileSize(result.appCache.sumOf { it.size })}")
         binding.tvAppCacheSize.text = formatFileSize(result.appCache.sumOf { it.size })
         binding.tvApkSize.text = formatFileSize(result.apkFiles.sumOf { it.size })
         binding.tvLogSize.text = formatFileSize(result.logFiles.sumOf { it.size })
         binding.tvAdSize.text = formatFileSize(result.adJunk.sumOf { it.size })
         binding.tvTempSize.text = formatFileSize(result.tempFiles.sumOf { it.size })
+
     }
 
     private fun updateCleanButton() {
@@ -488,7 +512,7 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         val buttonText = "Clean (${formatFileSize(selectedSize)})"
         binding.butClean.text = buttonText
         binding.butClean.isEnabled = selectedFiles.isNotEmpty()
-
+        AppDataTool.cleanNum = buttonText
         Log.d("CleanButton", "updateCleanButton: $selectedCount files, ${formatFileSize(selectedSize)}")
     }
 
@@ -528,45 +552,11 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
     }
 
     private fun showCleanConfirmDialog() {
-        val selectedSize = selectedFiles.sumOf { it.size }
-        val message = "Are you sure you want to clean up the selected ${selectedFiles. size} files?\nTotal size: ${formatFileSize (selectedSize)}"
-        AlertDialog.Builder(this)
-            .setTitle("Confirm the cleanup")
-            .setMessage(message)
-            .setPositiveButton("Are you sure") { _, _ ->
-                startCleaning()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        startActivity(Intent(this, ScanLoadActivity::class.java))
+        finish()
     }
 
-    private fun startCleaning() {
-        val progressDialog = ProgressDialog(this).apply {
-            setTitle("Cleaning up")
-            setMessage("Deleting junk files...")
-            setProgressStyle(ProgressDialog.STYLE_HORIZONTAL)
-            max = selectedFiles.size
-            setCancelable(false)
-            show()
-        }
 
-        lifecycleScope.launch {
-            try {
-                val filesToDelete = selectedFiles.toList()
-                val (deletedCount, deletedSize) = FileScanner.deleteFiles(filesToDelete) { current, total ->
-                    progressDialog.progress = current
-                    progressDialog.setMessage("Cleaned up: $current/$total")
-                }
-
-                progressDialog.dismiss()
-                showCleanResult(deletedCount, deletedSize)
-
-            } catch (e: Exception) {
-                progressDialog.dismiss()
-                Toast.makeText(this@ScanActivity, "Something went wrong with the cleanup: ${e.message}", Toast.LENGTH_LONG).show()
-            }
-        }
-    }
 
     private fun refreshExpandedCategories() {
         categoryExpandStates.forEach { (categoryName, isExpanded) ->

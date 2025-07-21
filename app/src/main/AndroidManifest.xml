@@ -55,6 +55,15 @@
             android:screenOrientation="portrait"
             android:launchMode="singleTop"
             android:exported="true"/>
+        <activity android:name=".one.ScanLoadActivity"
+            android:screenOrientation="portrait"
+            android:launchMode="singleTop"
+            android:exported="true"/>
+
+        <activity android:name=".one.ScanResultActivity"
+            android:screenOrientation="portrait"
+            android:launchMode="singleTop"
+            android:exported="true"/>
     </application>
 
 </manifest>

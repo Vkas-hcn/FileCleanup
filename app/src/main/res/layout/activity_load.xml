@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/load"
+    android:background="@color/white"
+    android:fitsSystemWindows="true">
+
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/tv_back"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:padding="16dp"
+            android:drawablePadding="8dp"
+            android:drawableStart="@drawable/icon_back"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"/>
+
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/pg"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            app:indicatorColor="#48A2FF"
+            app:indicatorInset="0dp"
+            app:indicatorSize="168dp"
+            app:layout_constraintBottom_toTopOf="@+id/imageView"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:trackColor="#EBF5FF"
+            app:trackThickness="28dp"
+            tools:progress="0" />
+
+        <ImageView
+            android:id="@+id/img_bg_1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_load_bg_b"
+            app:layout_constraintBottom_toBottomOf="@+id/pg"
+            app:layout_constraintEnd_toEndOf="@+id/pg"
+            app:layout_constraintStart_toStartOf="@+id/pg"
+            app:layout_constraintTop_toTopOf="@+id/pg" />
+        <ImageView
+            android:id="@+id/img_bg_2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_load_bg_w"
+            app:layout_constraintBottom_toBottomOf="@+id/pg"
+            app:layout_constraintEnd_toEndOf="@+id/pg"
+            app:layout_constraintStart_toStartOf="@+id/pg"
+            app:layout_constraintTop_toTopOf="@+id/pg" />
+        <ImageView
+            android:id="@+id/img_logo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_load_logo"
+            app:layout_constraintBottom_toBottomOf="@+id/pg"
+            app:layout_constraintEnd_toEndOf="@+id/pg"
+            app:layout_constraintStart_toStartOf="@+id/pg"
+            app:layout_constraintTop_toTopOf="@+id/pg" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Scanning…"
+            android:textColor="#FF606060"
+            android:textSize="16sp"
+            android:layout_marginTop="24dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/pg" />
+
+        <ImageView
+            android:id="@+id/imageView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_load_bottom"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

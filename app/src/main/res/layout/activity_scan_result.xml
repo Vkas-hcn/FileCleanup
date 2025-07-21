@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/result"
+    android:background="@drawable/bg_one"
+    android:fitsSystemWindows="true">
+
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <ImageView
+            android:id="@+id/img_top"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scaleType="centerCrop"
+            android:src="@drawable/bg_top_result"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/text_view_id"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="Result"
+            android:textColor="#FFFFFFFF"
+            android:textSize="15sp"
+            android:padding="16dp"
+            android:drawablePadding="8dp"
+            android:textStyle="bold"
+            android:drawableStart="@drawable/ic_back_w"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"/>
+
+        <TextView
+            android:id="@+id/textView2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="CLEAN_FINISHED"
+            android:textColor="#FFE2FFE4"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/text_view_id" />
+
+        <TextView
+            android:id="@+id/tv_save_data"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Saved 400MB space for you"
+            android:textColor="#FFEAFFEB"
+            android:textSize="12sp"
+            android:layout_marginTop="8dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/textView2" />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/atv_clean"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_result_item"
+            android:text="Picture Clean"
+            android:textColor="#FF252525"
+            android:textSize="12sp"
+            android:padding="16dp"
+            android:textStyle="bold"
+            android:layout_marginTop="24dp"
+            android:drawablePadding="8dp"
+            android:drawableStart="@drawable/ic_img"
+            android:layout_marginHorizontal="20dp"
+            android:gravity="center_vertical"
+            app:layout_constraintTop_toBottomOf="@+id/img_top" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Clean"
+            android:textColor="#FFFFFFFF"
+            android:textSize="12sp"
+            android:paddingVertical="7dp"
+            android:paddingHorizontal="13dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_clean_but"
+            app:layout_constraintBottom_toBottomOf="@+id/atv_clean"
+            app:layout_constraintEnd_toEndOf="@+id/atv_clean"
+            app:layout_constraintTop_toTopOf="@+id/atv_clean" />
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/atv_file"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_result_item"
+            android:text="File Clean"
+            android:textColor="#FF252525"
+            android:textSize="12sp"
+            android:padding="16dp"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp"
+            android:drawablePadding="8dp"
+            android:drawableStart="@drawable/ic_file"
+            android:layout_marginHorizontal="20dp"
+            android:gravity="center_vertical"
+            app:layout_constraintTop_toBottomOf="@+id/atv_clean" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Clean"
+            android:textColor="#FFFFFFFF"
+            android:textSize="12sp"
+            android:paddingVertical="7dp"
+            android:paddingHorizontal="13dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_clean_but"
+            app:layout_constraintBottom_toBottomOf="@+id/atv_file"
+            app:layout_constraintEnd_toEndOf="@+id/atv_file"
+            app:layout_constraintTop_toTopOf="@+id/atv_file" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
