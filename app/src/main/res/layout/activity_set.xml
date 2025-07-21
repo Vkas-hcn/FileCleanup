@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/set"
+    android:background="@drawable/bg_one"
+    android:fitsSystemWindows="true">
+
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/text_view_id"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="Settings"
+            android:padding="16dp"
+            android:drawablePadding="8dp"
+            android:textColor="#FF191919"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:drawableStart="@drawable/icon_back"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"/>
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/atv_share"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_set"
+            android:text="Share"
+            android:padding="16dp"
+            android:textStyle="bold"
+            android:drawableEnd="@drawable/ic_right"
+            android:layout_marginTop="24dp"
+            android:drawablePadding="8dp"
+            android:drawableStart="@drawable/ic_fenxiang"
+            android:layout_marginHorizontal="20dp"
+            android:textColor="#FF252525"
+            android:gravity="center_vertical"
+            android:textSize="14sp"
+            app:layout_constraintTop_toBottomOf="@+id/text_view_id" />
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/atv_net"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_set"
+            android:text="Privacy Policy"
+            android:padding="16dp"
+            android:textStyle="bold"
+            android:drawableEnd="@drawable/ic_right"
+            android:layout_marginTop="16dp"
+            android:drawablePadding="8dp"
+            android:drawableStart="@drawable/ic_net"
+            android:layout_marginHorizontal="20dp"
+            android:textColor="#FF252525"
+            android:gravity="center_vertical"
+            android:textSize="14sp"
+            app:layout_constraintTop_toBottomOf="@+id/atv_share" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
