@@ -37,6 +37,7 @@ class ScanLoadActivity : AppCompatActivity() {
         this.supportActionBar?.hide()
         onBackPressedDispatcher.addCallback {
         }
+        showLogoType()
         binding.tvBack.setOnClickListener {
             progressJob?.cancel()
             finish()
@@ -56,4 +57,22 @@ class ScanLoadActivity : AppCompatActivity() {
             }
         }
     }
+
+    fun showLogoType(){
+        when (AppDataTool.jumpType) {
+            0 -> {
+                binding.imgLogo.setImageResource(R.drawable.ic_load_logo)
+            }
+
+            1 -> {
+                binding.imgLogo.setImageResource(R.drawable.ic_img)
+            }
+
+            2 -> {
+                binding.imgLogo.setImageResource(R.drawable.ic_file)
+            }
+
+        }
+    }
+
 }

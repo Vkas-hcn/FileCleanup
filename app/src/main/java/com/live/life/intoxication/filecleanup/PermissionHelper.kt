@@ -1,10 +1,14 @@
-package com.live.life.intoxication.filecleanup.utils
+package com.live.life.intoxication.filecleanup
 
 import android.Manifest
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.os.Environment
+import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
@@ -19,10 +23,7 @@ object PermissionHelper {
     fun hasStoragePermission(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             // Android 11及以上使用MANAGE_EXTERNAL_STORAGE
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.MANAGE_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED
+            Environment.isExternalStorageManager()
         } else {
             // Android 10及以下使用传统权限
             ContextCompat.checkSelfPermission(
@@ -43,9 +44,8 @@ object PermissionHelper {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             // Android 11及以上需要特殊处理
             try {
-                val intent = android.content.Intent().apply {
-                    action = android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION
-                    data = android.net.Uri.parse("package:${activity.packageName}")
+                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                    data = Uri.parse("package:${activity.packageName}")
                 }
                 activity.startActivityForResult(intent, MANAGE_EXTERNAL_STORAGE_CODE)
             } catch (e: Exception) {
@@ -56,6 +56,7 @@ object PermissionHelper {
             requestTraditionalStoragePermission(activity)
         }
     }
+
 
     private fun requestTraditionalStoragePermission(activity: Activity) {
         val permissions = arrayOf(

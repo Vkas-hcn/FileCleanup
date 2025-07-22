@@ -11,17 +11,21 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.live.life.intoxication.filecleanup.databinding.ActivityMainBinding
 import com.live.life.intoxication.filecleanup.one.SetActivity
-import com.live.life.intoxication.filecleanup.utils.PermissionHelper
 import java.text.DecimalFormat
 import kotlin.math.round
 import android.content.Context
 import android.os.storage.StorageManager
 import android.app.usage.StorageStatsManager
-import android.text.format.Formatter
+import android.widget.Toast
+import androidx.core.view.isVisible
+import com.live.life.intoxication.filecleanup.PermissionHelper.MANAGE_EXTERNAL_STORAGE_CODE
+import com.live.life.intoxication.filecleanup.file.CleanFileActivity
+import com.live.life.intoxication.filecleanup.image.CleanPhotosActivity
+import kotlin.jvm.java
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-
+    private var jumpType: Int = 0
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -34,27 +38,12 @@ class MainActivity : AppCompatActivity() {
         }
         this.supportActionBar?.hide()
 
-        // 检查权限
-        if (!PermissionHelper.hasStoragePermission(this)) {
-            PermissionHelper.requestStoragePermission(this)
-        }
+
 
         clickFun()
         updateStorageInfo()
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PermissionHelper.STORAGE_PERMISSION_CODE) {
-            if (PermissionHelper.hasStoragePermission(this)) {
-                updateStorageInfo()
-            }
-        }
-    }
 
     private fun updateStorageInfo() {
         try {
@@ -93,7 +82,8 @@ class MainActivity : AppCompatActivity() {
 
                 // 对于API 24+，可以使用StorageStatsManager
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    val storageStatsManager = getSystemService(Context.STORAGE_STATS_SERVICE) as StorageStatsManager
+                    val storageStatsManager =
+                        getSystemService(Context.STORAGE_STATS_SERVICE) as StorageStatsManager
                     val uuid = StorageManager.UUID_DEFAULT
                     storageStatsManager.getTotalBytes(uuid)
                 } else {
@@ -120,7 +110,8 @@ class MainActivity : AppCompatActivity() {
     private fun getAvailableStorageSpace(): Long {
         return try {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                val storageStatsManager = getSystemService(Context.STORAGE_STATS_SERVICE) as StorageStatsManager
+                val storageStatsManager =
+                    getSystemService(Context.STORAGE_STATS_SERVICE) as StorageStatsManager
                 val uuid = StorageManager.UUID_DEFAULT
                 storageStatsManager.getFreeBytes(uuid)
             } else {
@@ -134,32 +125,28 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateStorageDisplay(totalBytes: Long, usedBytes: Long, availableBytes: Long, percentage: Int) {
+    private fun updateStorageDisplay(
+        totalBytes: Long,
+        usedBytes: Long,
+        availableBytes: Long,
+        percentage: Int
+    ) {
         // 使用统一的格式化方法，保持一致性
         val (freeSize, freeUnit) = formatStorageSize(availableBytes)
         val (usedSize, usedUnit) = formatStorageSize(usedBytes)
         val (totalSize, totalUnit) = formatStorageSize(totalBytes)
 
         binding.apply {
-            // 显示可用空间
             tvFreeNum.text = freeSize
             tvGb.text = freeUnit
 
-            // 显示已用空间
             tvUserNum.text = usedSize
             tvGb2.text = usedUnit
 
-            // 显示使用百分比
             tvProNum.text = percentage.toString()
 
-            // 设置进度条
             progressUser.progress = percentage
         }
-
-        // 添加调试日志，查看实际容量
-        Log.d("StorageInfo", "Total: ${formatStorageSize(totalBytes).first}${formatStorageSize(totalBytes).second}")
-        Log.d("StorageInfo", "Used: ${formatStorageSize(usedBytes).first}${formatStorageSize(usedBytes).second}")
-        Log.d("StorageInfo", "Free: ${formatStorageSize(availableBytes).first}${formatStorageSize(availableBytes).second}")
     }
 
     private fun formatStorageSize(bytes: Long): Pair<String, String> {
@@ -171,14 +158,17 @@ class MainActivity : AppCompatActivity() {
                 val size = round((bytes.toDouble() / gb) * 100) / 100
                 Pair(DecimalFormat("#.#").format(size), "GB")
             }
+
             bytes >= mb -> {
                 val size = round((bytes.toDouble() / mb) * 100) / 100
                 Pair(DecimalFormat("#.#").format(size), "MB")
             }
+
             bytes >= kb -> {
                 val size = round((bytes.toDouble() / kb) * 100) / 100
                 Pair(DecimalFormat("#.#").format(size), "KB")
             }
+
             else -> {
                 Pair(bytes.toString(), "B")
             }
@@ -191,20 +181,36 @@ class MainActivity : AppCompatActivity() {
                 startActivity(Intent(this@MainActivity, SetActivity::class.java))
             }
             tvClean.setOnClickListener {
-                val intent = Intent(this@MainActivity, ScanActivity::class.java)
-                startActivityForResult(intent, SCAN_REQUEST_CODE)
+                jumpType = 0
+                if (PermissionHelper.hasStoragePermission(this@MainActivity)) {
+                    jumpToCleanActivity()
+                } else {
+                    binding.conDialog.isVisible = true
+                }
             }
             llPicture.setOnClickListener {
-                // 图片清理功能
-                val intent = Intent(this@MainActivity, ScanActivity::class.java)
-                intent.putExtra("scan_type", "pictures")
-                startActivityForResult(intent, SCAN_REQUEST_CODE)
+                jumpType = 1
+                if (PermissionHelper.hasStoragePermission(this@MainActivity)) {
+                    jumpToCleanActivity()
+                } else {
+                    binding.conDialog.isVisible = true
+                }
             }
             llFile.setOnClickListener {
-                // 文件清理功能
-                val intent = Intent(this@MainActivity, ScanActivity::class.java)
-                intent.putExtra("scan_type", "files")
-                startActivityForResult(intent, SCAN_REQUEST_CODE)
+                jumpType = 2
+                if (PermissionHelper.hasStoragePermission(this@MainActivity)) {
+                    jumpToCleanActivity()
+                } else {
+                    binding.conDialog.isVisible = true
+                }
+            }
+            conDialog.setOnClickListener { }
+            tvCancel.setOnClickListener {
+                binding.conDialog.isVisible = false
+            }
+            tvYes.setOnClickListener {
+                binding.conDialog.isVisible = false
+                PermissionHelper.requestStoragePermission(this@MainActivity)
             }
         }
     }
@@ -212,9 +218,39 @@ class MainActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == SCAN_REQUEST_CODE && resultCode == RESULT_OK) {
-            // 扫描清理完成后，更新存储信息
             updateStorageInfo()
         }
+        if (requestCode == MANAGE_EXTERNAL_STORAGE_CODE) {
+            if (PermissionHelper.hasStoragePermission(this)) {
+                jumpToCleanActivity()
+            } else {
+                binding.conDialog.isVisible = true
+            }
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == PermissionHelper.STORAGE_PERMISSION_CODE) {
+            if (PermissionHelper.hasStoragePermission(this)) {
+                jumpToCleanActivity()
+            }
+        }
+    }
+
+    fun jumpToCleanActivity() {
+        val cls = when (jumpType) {
+            0 -> ScanActivity::class.java
+            1 -> CleanPhotosActivity::class.java
+            2 -> CleanFileActivity::class.java
+            else -> ScanActivity::class.java
+        }
+        val intent = Intent(this@MainActivity, cls)
+        startActivityForResult(intent, SCAN_REQUEST_CODE)
     }
 
     companion object {

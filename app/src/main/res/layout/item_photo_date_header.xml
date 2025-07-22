@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="16dp"
+    android:gravity="center_vertical"
+    android:background="?android:attr/selectableItemBackground">
+
+    <TextView
+        android:id="@+id/tv_date"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="Today"
+        android:textColor="@color/black"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tv_count"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="10 items"
+        android:textColor="@color/gray"
+        android:textSize="14sp"
+        android:layout_marginEnd="16dp" />
+
+    <ImageView
+        android:id="@+id/iv_select_all"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/ic_image_not_selected"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:padding="2dp" />
+
+</LinearLayout>

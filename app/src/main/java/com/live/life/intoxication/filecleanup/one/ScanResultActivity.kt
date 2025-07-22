@@ -15,6 +15,8 @@ import com.live.life.intoxication.filecleanup.R
 import com.live.life.intoxication.filecleanup.databinding.ActivityLoadBinding
 import com.live.life.intoxication.filecleanup.databinding.ActivityScanBinding
 import com.live.life.intoxication.filecleanup.databinding.ActivityScanResultBinding
+import com.live.life.intoxication.filecleanup.file.CleanFileActivity
+import com.live.life.intoxication.filecleanup.image.CleanPhotosActivity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -38,5 +40,15 @@ class ScanResultActivity : AppCompatActivity() {
             finish()
         }
         binding.tvSaveData.text = "Saved ${AppDataTool.cleanNum} space for you"
+        binding.atvClean.setOnClickListener {
+            val intent = Intent(this, CleanPhotosActivity::class.java)
+            startActivity(intent)
+            finish()
+        }
+        binding.atvFile.setOnClickListener {
+            val intent = Intent(this, CleanFileActivity::class.java)
+            startActivity(intent)
+            finish()
+        }
     }
 }

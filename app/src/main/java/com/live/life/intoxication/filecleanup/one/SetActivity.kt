@@ -21,13 +21,15 @@ import kotlinx.coroutines.launch
 class SetActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySetBinding
-companion object {
-    fun jumpToActive(activity: AppCompatActivity){
-        //TODO: 2023/5/23 跳转网页
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://google.com"))
-        activity.startActivity(intent)
+
+    companion object {
+        fun jumpToActive(activity: AppCompatActivity) {
+            //TODO: 2023/5/23 跳转网页
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://google.com"))
+            activity.startActivity(intent)
+        }
     }
-}
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -39,14 +41,17 @@ companion object {
             insets
         }
         this.supportActionBar?.hide()
-        with(binding){
+        with(binding) {
             textViewId.setOnClickListener {
                 finish()
             }
             atvShare.setOnClickListener {
                 val intent = Intent(Intent.ACTION_SEND)
                 intent.type = "text/plain"
-                intent.putExtra(Intent.EXTRA_TEXT, "https://play.google.com/store/apps/details?id=${this@SetActivity.packageName}")
+                intent.putExtra(
+                    Intent.EXTRA_TEXT,
+                    "https://play.google.com/store/apps/details?id=${this@SetActivity.packageName}"
+                )
                 startActivity(Intent.createChooser(intent, "Share"))
             }
             atvNet.setOnClickListener {

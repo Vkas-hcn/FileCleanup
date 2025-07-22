@@ -1,7 +1,6 @@
 package com.live.life.intoxication.filecleanup
 
 import android.app.AlertDialog
-import android.app.ProgressDialog
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -15,11 +14,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.live.life.intoxication.filecleanup.databinding.ActivityScanBinding
 import com.live.life.intoxication.filecleanup.one.ScanLoadActivity
-import com.live.life.intoxication.filecleanup.scanner.FileScanner
-import com.live.life.intoxication.filecleanup.utils.PermissionHelper
 import kotlinx.coroutines.*
 import java.text.DecimalFormat
 import kotlin.math.round
@@ -63,12 +61,16 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
     }
 
     private fun initializeStates() {
-
+        // 初始化所有分类为选中状态
         categorySelectStates["App Cache"] = true
         categorySelectStates["Apk Files"] = true
         categorySelectStates["Log Files"] = true
         categorySelectStates["AD Junk"] = true
         categorySelectStates["Temp Files"] = true
+        categorySelectStates["Empty Files"] = true
+        categorySelectStates["Duplicate Files"] = true
+        categorySelectStates["Large Files"] = false // 大文件默认不选中
+        categorySelectStates["Other"] = true
     }
 
     private fun requestPermissionAndScan() {
@@ -85,22 +87,6 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
             .show()
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PermissionHelper.STORAGE_PERMISSION_CODE) {
-            if (PermissionHelper.hasStoragePermission(this)) {
-                startScanning()
-            } else {
-                Toast.makeText(this, "Storage permissions are required to scan files", Toast.LENGTH_LONG).show()
-                finish()
-            }
-        }
-    }
-
     private fun setupClickListeners() {
         binding.textBack.setOnClickListener {
             if (isScanning) {
@@ -112,12 +98,26 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
 
         binding.butClean.setOnClickListener {
             if (selectedFiles.isNotEmpty()) {
-                showCleanConfirmDialog()
+                showDeleteConfirmDialog()
             }
         }
 
         // 设置分类点击事件
         setupCategoryClickListeners()
+    }
+
+    private fun showDeleteConfirmDialog() {
+        val selectedSize = selectedFiles.sumOf { it.size }
+        val selectedCount = selectedFiles.size
+
+        AlertDialog.Builder(this)
+            .setTitle("Confirm deletion")
+            .setMessage("About to delete $selectedCount files, release ${formatFileSize(selectedSize)} space.\n\nThis operation cannot be undone, are you sure you want to continue?")
+            .setPositiveButton("Delete") { _, _ ->
+                startCleaning()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun showCancelScanDialog() {
@@ -133,6 +133,7 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
     }
 
     private fun setupCategoryClickListeners() {
+        // 展开/收起点击事件
         binding.layoutAppCache.setOnClickListener {
             toggleCategory("App Cache", binding.layoutAppCacheDetails, binding.ivAppCacheExpand)
         }
@@ -153,7 +154,7 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
             toggleCategory("Temp Files", binding.layoutTempDetails, binding.ivTempExpand)
         }
 
-        // 设置分类选中按钮
+        // 选中/取消选中点击事件
         binding.ivAppCacheStatus.setOnClickListener {
             toggleCategorySelection("App Cache", binding.ivAppCacheStatus)
         }
@@ -173,6 +174,20 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         binding.ivTempFilesStatus.setOnClickListener {
             toggleCategorySelection("Temp Files", binding.ivTempFilesStatus)
         }
+
+        // 如果有新增的UI元素，也要添加对应的点击事件
+        // 注意：这里假设你的布局文件中已经添加了相应的UI元素
+        // binding.ivEmptyFilesStatus?.setOnClickListener {
+        //     toggleCategorySelection("Empty Files", binding.ivEmptyFilesStatus)
+        // }
+        //
+        // binding.ivDuplicateFilesStatus?.setOnClickListener {
+        //     toggleCategorySelection("Duplicate Files", binding.ivDuplicateFilesStatus)
+        // }
+        //
+        // binding.ivLargeFilesStatus?.setOnClickListener {
+        //     toggleCategorySelection("Large Files", binding.ivLargeFilesStatus)
+        // }
     }
 
     private fun toggleCategory(categoryName: String, detailsLayout: LinearLayout, expandIcon: ImageView) {
@@ -189,16 +204,15 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         }
     }
 
-    // ... existing code ...
     private fun toggleCategorySelection(categoryName: String, statusIcon: ImageView) {
         val isCurrentlySelected = categorySelectStates[categoryName] ?: true
         val newSelectState = !isCurrentlySelected
         categorySelectStates[categoryName] = newSelectState
-        Log.e("TAG", "toggleCategorySelection-1: ${isCurrentlySelected}", )
+
+        Log.d("CategorySelection", "Toggling $categoryName: $isCurrentlySelected -> $newSelectState")
+
         // 获取该分类下的所有文件
         val categoryFiles = getCategoryFiles(categoryName)
-
-        Log.d("CategorySelection", "Processing $categoryName: ${categoryFiles.size} files")
 
         // 确保所有文件状态一致
         categoryFiles.forEach { file ->
@@ -206,20 +220,7 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         }
 
         // 重新计算选中文件
-        selectedFiles.clear()
-        scanResult?.let { result ->
-            listOf(
-                result.appCache,
-                result.apkFiles,
-                result.logFiles,
-                result.adJunk,
-                result.tempFiles,
-                result.otherFiles
-            ).flatten()
-                .filter { it.isSelected }
-                .forEach { selectedFiles.add(it) }
-        }
-        Log.e("TAG", "toggleCategorySelection-2: ${newSelectState}", )
+        recalculateSelectedFiles()
 
         // 更新UI图标
         statusIcon.setImageResource(
@@ -240,13 +241,28 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
             }
         }
 
-        // 详细的调试日志
         Log.d("CategorySelection", "$categoryName: ${categoryFiles.size} files, selected: $newSelectState")
         Log.d("CategorySelection", "Total selected files: ${selectedFiles.size}")
-        Log.d("CategorySelection", "Selected file paths: ${selectedFiles.map { it.path }}")
-        Log.d("CategorySelection", "Selected size: ${formatFileSize(selectedFiles.sumOf { it.size })}")
     }
-// ... existing code ...
+
+    private fun recalculateSelectedFiles() {
+        selectedFiles.clear()
+        scanResult?.let { result ->
+            listOf(
+                result.appCache,
+                result.apkFiles,
+                result.logFiles,
+                result.adJunk,
+                result.tempFiles,
+                result.emptyFiles,
+                result.duplicateFiles,
+                result.largeFiles,
+                result.otherFiles
+            ).flatten()
+                .filter { it.isSelected }
+                .forEach { selectedFiles.add(it) }
+        }
+    }
 
     private fun getCategoryFiles(categoryName: String): List<FileScanner.JunkFile> {
         val result = scanResult ?: return emptyList()
@@ -256,6 +272,10 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
             "Log Files" -> result.logFiles
             "AD Junk" -> result.adJunk
             "Temp Files" -> result.tempFiles
+            "Empty Files" -> result.emptyFiles
+            "Duplicate Files" -> result.duplicateFiles
+            "Large Files" -> result.largeFiles
+            "Other" -> result.otherFiles
             else -> emptyList()
         }
     }
@@ -267,6 +287,11 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
             "Log Files" -> binding.layoutLogDetails
             "AD Junk" -> binding.layoutAdDetails
             "Temp Files" -> binding.layoutTempDetails
+            // 新增的分类需要对应的布局，这里先返回null
+            "Empty Files" -> null // binding.layoutEmptyFilesDetails
+            "Duplicate Files" -> null // binding.layoutDuplicateFilesDetails
+            "Large Files" -> null // binding.layoutLargeFilesDetails
+            "Other" -> null // binding.layoutOtherDetails
             else -> null
         }
     }
@@ -280,16 +305,30 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
             detailsLayout.removeViews(1, childCount - 1)
         }
 
+        // 根据不同类型显示不同数量的文件
+        val displayLimit = when (categoryName) {
+            "Large Files" -> 20 // 大文件显示较少
+            "Duplicate Files" -> 100 // 重复文件可以多显示一些
+            else -> 200 // 其他类型显示200个
+        }
+
+        // 对文件进行排序
+        val sortedFiles = when (categoryName) {
+            "Large Files" -> categoryFiles.sortedByDescending { it.size }
+            "Duplicate Files" -> categoryFiles.sortedBy { it.name }
+            else -> categoryFiles.sortedByDescending { it.size }
+        }
+
         // 添加文件列表
-        categoryFiles.take(500).forEach { file -> // 限制显示数量避免卡顿
+        sortedFiles.take(displayLimit).forEach { file ->
             val fileView = createFileItemView(file, categoryName)
             detailsLayout.addView(fileView)
         }
 
         // 如果文件数量太多，显示提示
-        if (categoryFiles.size > 500) {
+        if (categoryFiles.size > displayLimit) {
             val moreView = TextView(this).apply {
-                text = "... There are still ${categoryFiles. size -500} files available"
+                text = "... There are still ${categoryFiles.size - displayLimit} files available"
                 textSize = 12f
                 setTextColor(resources.getColor(android.R.color.darker_gray, null))
                 setPadding(48, 16, 16, 16)
@@ -298,7 +337,6 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         }
     }
 
-    // ... existing code ...
     private fun createFileItemView(file: FileScanner.JunkFile, categoryName: String): View {
         val itemView = LayoutInflater.from(this).inflate(R.layout.item_junk_file, null)
 
@@ -308,9 +346,30 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         val ivFileStatus = itemView.findViewById<ImageView>(R.id.iv_file_status)
 
         tvFileName.text = file.name
-        tvFilePath.text = file.path
+
+        // 根据文件类型显示不同的路径信息
+        when (categoryName) {
+            "Large Files" -> {
+                tvFilePath.text = "${file.path}\n修改时间: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date(file.lastModified))}"
+            }
+            "Duplicate Files" -> {
+                tvFilePath.text = "${file.path}\n(重复文件)"
+            }
+            "Empty Files" -> {
+                tvFilePath.text = "${file.path}\n(空文件)"
+            }
+            else -> {
+                tvFilePath.text = file.path
+            }
+        }
+
         tvFileSize.text = formatFileSize(file.size)
         ivFileStatus.setImageResource(if (file.isSelected) R.drawable.ic_check else R.drawable.ic_check_circle)
+
+        // 为大文件添加特殊颜色标识
+        if (categoryName == "Large Files" && file.size > 200 * 1024 * 1024) {
+            tvFileSize.setTextColor(resources.getColor(android.R.color.holo_red_dark, null))
+        }
 
         itemView.setOnClickListener {
             Log.d("FileClick", "Clicked file: ${file.name} (current selected: ${file.isSelected})")
@@ -322,19 +381,7 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
             updateCategorySelectionStatus(categoryName)
 
             // 重新计算所有选中文件
-            selectedFiles.clear()
-            scanResult?.let { result ->
-                listOf(
-                    result.appCache,
-                    result.apkFiles,
-                    result.logFiles,
-                    result.adJunk,
-                    result.tempFiles,
-                    result.otherFiles
-                ).flatten()
-                    .filter { it.isSelected }
-                    .forEach { selectedFiles.add(it) }
-            }
+            recalculateSelectedFiles()
 
             // 更新UI
             ivFileStatus.setImageResource(if (file.isSelected) R.drawable.ic_check else R.drawable.ic_check_circle)
@@ -361,6 +408,11 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
             "Log Files" -> binding.ivLogFileStatus
             "AD Junk" -> binding.ivAdJunkStatus
             "Temp Files" -> binding.ivTempFilesStatus
+            // 新增分类的图标需要根据实际的UI元素来设置
+            // "Empty Files" -> binding.ivEmptyFilesStatus
+            // "Duplicate Files" -> binding.ivDuplicateFilesStatus
+            // "Large Files" -> binding.ivLargeFilesStatus
+            // "Other" -> binding.ivOtherStatus
             else -> null
         }
 
@@ -369,8 +421,6 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
             else R.drawable.ic_check_circle
         )
     }
-// ... existing code ...
-
 
     private fun startScanning() {
         isScanning = true
@@ -382,6 +432,7 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         // 清空之前的状态
         selectedFiles.clear()
         scanResult = FileScanner.ScanResult()
+
         // 重置分类大小显示
         binding.tvAppCacheSize.text = "0MB"
         binding.tvApkSize.text = "0MB"
@@ -394,16 +445,37 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
                 scanResult = fileScanner.startScan(this@ScanActivity)
                 withContext(Dispatchers.Main) {
                     updateCategorySizes()
-                    binding.ivAppCacheStatus.setImageResource(R.drawable.ic_check)
-                    binding.ivAppFileStatus.setImageResource(R.drawable.ic_check)
-                    binding.ivLogFileStatus.setImageResource(R.drawable.ic_check)
-                    binding.ivAdJunkStatus.setImageResource(R.drawable.ic_check)
-                    binding.ivTempFilesStatus.setImageResource(R.drawable.ic_check)
+                    // 更新所有分类的选中状态图标
+                    updateAllCategoryIcons()
                 }
             } catch (e: Exception) {
                 onError("The scan failed: ${e.message}")
             }
         }
+    }
+
+    private fun updateAllCategoryIcons() {
+        binding.ivAppCacheStatus.setImageResource(
+            if (categorySelectStates["App Cache"] == true) R.drawable.ic_check else R.drawable.ic_check_circle
+        )
+        binding.ivAppFileStatus.setImageResource(
+            if (categorySelectStates["Apk Files"] == true) R.drawable.ic_check else R.drawable.ic_check_circle
+        )
+        binding.ivLogFileStatus.setImageResource(
+            if (categorySelectStates["Log Files"] == true) R.drawable.ic_check else R.drawable.ic_check_circle
+        )
+        binding.ivAdJunkStatus.setImageResource(
+            if (categorySelectStates["AD Junk"] == true) R.drawable.ic_check else R.drawable.ic_check_circle
+        )
+        binding.ivTempFilesStatus.setImageResource(
+            if (categorySelectStates["Temp Files"] == true) R.drawable.ic_check else R.drawable.ic_check_circle
+        )
+
+        // 新增分类的图标更新
+        // binding.ivEmptyFilesStatus?.setImageResource(...)
+        // binding.ivDuplicateFilesStatus?.setImageResource(...)
+        // binding.ivLargeFilesStatus?.setImageResource(...)
+        // binding.ivOtherStatus?.setImageResource(...)
     }
 
     private fun cancelScanning() {
@@ -448,6 +520,9 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
             "Log Files" to result.logFiles,
             "AD Junk" to result.adJunk,
             "Temp Files" to result.tempFiles,
+            "Empty Files" to result.emptyFiles,
+            "Duplicate Files" to result.duplicateFiles,
+            "Large Files" to result.largeFiles,
             "Other" to result.otherFiles
         )
 
@@ -475,21 +550,27 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
 
         updateCategorySizes()
         updateCleanButton()
-
-        Toast.makeText(this, "Scan completed! Find ${result.getTotalCount()} junk files", Toast.LENGTH_SHORT).show()
-
         // 详细的调试日志
-        Log.d("ScanComplete", "=== Scan Complete Summary ===")
+        logScanResults(result)
+    }
+
+    private fun logScanResults(result: FileScanner.ScanResult) {
+        Log.d("ScanComplete", "=== Enhanced Scan Complete Summary ===")
         Log.d("ScanComplete", "Total files found: ${result.getTotalCount()}")
         Log.d("ScanComplete", "App Cache: ${result.appCache.size} files (${formatFileSize(result.appCache.sumOf { it.size })})")
         Log.d("ScanComplete", "Apk Files: ${result.apkFiles.size} files (${formatFileSize(result.apkFiles.sumOf { it.size })})")
         Log.d("ScanComplete", "Log Files: ${result.logFiles.size} files (${formatFileSize(result.logFiles.sumOf { it.size })})")
         Log.d("ScanComplete", "AD Junk: ${result.adJunk.size} files (${formatFileSize(result.adJunk.sumOf { it.size })})")
         Log.d("ScanComplete", "Temp Files: ${result.tempFiles.size} files (${formatFileSize(result.tempFiles.sumOf { it.size })})")
+        Log.d("ScanComplete", "Empty Files: ${result.emptyFiles.size} files (${formatFileSize(result.emptyFiles.sumOf { it.size })})")
+        Log.d("ScanComplete", "Duplicate Files: ${result.duplicateFiles.size} files (${formatFileSize(result.duplicateFiles.sumOf { it.size })})")
+        Log.d("ScanComplete", "Large Files: ${result.largeFiles.size} files (${formatFileSize(result.largeFiles.sumOf { it.size })})")
+        Log.d("ScanComplete", "Other Files: ${result.otherFiles.size} files (${formatFileSize(result.otherFiles.sumOf { it.size })})")
         Log.d("ScanComplete", "Selected files total: ${selectedFiles.size}")
         Log.d("ScanComplete", "Selected size total: ${formatFileSize(selectedFiles.sumOf { it.size })}")
         Log.d("ScanComplete", "===============================")
     }
+
     override fun onError(error: String) {
         isScanning = false
         binding.linScan.visibility = View.GONE
@@ -504,12 +585,16 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         binding.tvAdSize.text = formatFileSize(result.adJunk.sumOf { it.size })
         binding.tvTempSize.text = formatFileSize(result.tempFiles.sumOf { it.size })
 
+        // binding.tvEmptyFilesSize?.text = formatFileSize(result.emptyFiles.sumOf { it.size })
+        // binding.tvDuplicateFilesSize?.text = formatFileSize(result.duplicateFiles.sumOf { it.size })
+        // binding.tvLargeFilesSize?.text = formatFileSize(result.largeFiles.sumOf { it.size })
+        // binding.tvOtherSize?.text = formatFileSize(result.otherFiles.sumOf { it.size })
     }
 
     private fun updateCleanButton() {
         val selectedSize = selectedFiles.sumOf { it.size }
         val selectedCount = selectedFiles.size
-        val buttonText = "Clean (${formatFileSize(selectedSize)})"
+        val buttonText = "Clean ($selectedCount files, ${formatFileSize(selectedSize)})"
         binding.butClean.text = buttonText
         binding.butClean.isEnabled = selectedFiles.isNotEmpty()
         AppDataTool.cleanNum = buttonText
@@ -551,12 +636,73 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         }
     }
 
-    private fun showCleanConfirmDialog() {
-        startActivity(Intent(this, ScanLoadActivity::class.java))
-        finish()
+    private fun startCleaning() {
+        lifecycleScope.launch {
+            try {
+                // 显示删除进度对话框
+                val progressDialog = AlertDialog.Builder(this@ScanActivity)
+                    .setTitle("Deleting files...")
+                    .setMessage("Deleting files, please wait...")
+                    .setCancelable(false)
+                    .create()
+
+                progressDialog.show()
+
+                // 执行删除操作
+                val (deletedCount, deletedSize) = FileScanner.deleteFiles(selectedFiles) { current, total ->
+                    runOnUiThread {
+                        progressDialog.setMessage("Deleting files... ($current/$total)")
+                    }
+                }
+
+                progressDialog.dismiss()
+
+                // 更新UI和显示结果
+                updateAfterDeletion()
+                showCleanResult(deletedCount, deletedSize)
+
+            } catch (e: Exception) {
+                Toast.makeText(this@ScanActivity, "Something went wrong with the cleanup: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
+    private fun updateAfterDeletion() {
+        // 从scanResult中移除已删除的文件
+        scanResult?.let { result ->
+            result.appCache.removeAll { file -> !java.io.File(file.path).exists() }
+            result.apkFiles.removeAll { file -> !java.io.File(file.path).exists() }
+            result.logFiles.removeAll { file -> !java.io.File(file.path).exists() }
+            result.adJunk.removeAll { file -> !java.io.File(file.path).exists() }
+            result.tempFiles.removeAll { file -> !java.io.File(file.path).exists() }
+            result.emptyFiles.removeAll { file -> !java.io.File(file.path).exists() }
+            result.duplicateFiles.removeAll { file -> !java.io.File(file.path).exists() }
+            result.largeFiles.removeAll { file -> !java.io.File(file.path).exists() }
+            result.otherFiles.removeAll { file -> !java.io.File(file.path).exists() }
+        }
 
+        // 从selectedFiles中移除已删除的文件
+        selectedFiles.removeAll { file -> !java.io.File(file.path).exists() }
+
+        // 更新UI显示
+        updateCategorySizes()
+        updateCleanButton()
+
+        // 刷新已展开的分类详情
+        refreshExpandedCategories()
+
+        // 更新总垃圾大小显示
+        val remainingSize = scanResult?.getTotalSize() ?: 0L
+        val (size, unit) = formatFileSizeParts(remainingSize)
+        binding.tvProNum.text = size
+        binding.tvUnit.text = unit
+
+        if (remainingSize == 0L) {
+            binding.butClean.visibility = View.GONE
+            // 恢复原始背景
+            binding.imgBg.setImageResource(R.drawable.bj)
+        }
+    }
 
     private fun refreshExpandedCategories() {
         categoryExpandStates.forEach { (categoryName, isExpanded) ->
@@ -570,52 +716,14 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
     }
 
     private fun showCleanResult(deletedCount: Int, deletedSize: Long) {
-        val message = "Cleanup is complete！\n" +
-                "Clean up your files: $deletedCount \n" +
-                "Free up space: ${formatFileSize(deletedSize)}"
+        setResult(RESULT_OK)
+        AppDataTool.jumpType = 0
 
-        AlertDialog.Builder(this)
-            .setTitle("Cleanup is complete")
-            .setMessage(message)
-            .setPositiveButton("Are you sure") { _, _ ->
-                // 清理成功后，从scanResult中移除已删除的文件
-                scanResult?.let { result ->
-                    result.appCache.removeAll { file -> !java.io.File(file.path).exists() }
-                    result.apkFiles.removeAll { file -> !java.io.File(file.path).exists() }
-                    result.logFiles.removeAll { file -> !java.io.File(file.path).exists() }
-                    result.adJunk.removeAll { file -> !java.io.File(file.path).exists() }
-                    result.tempFiles.removeAll { file -> !java.io.File(file.path).exists() }
-                    result.otherFiles.removeAll { file -> !java.io.File(file.path).exists() }
-                }
+        // 设置删除结果信息
+        AppDataTool.cleanNum = "Deleted $deletedCount files, freed ${formatFileSize(deletedSize)}"
 
-                // 从selectedFiles中移除已删除的文件
-                selectedFiles.removeAll { file -> !java.io.File(file.path).exists() }
-
-                // 更新UI显示
-                updateCategorySizes()
-                updateCleanButton()
-
-                // 刷新已展开的分类详情
-                refreshExpandedCategories()
-
-                // 更新总垃圾大小显示
-                val remainingSize = scanResult?.getTotalSize() ?: 0L
-                val (size, unit) = formatFileSizeParts(remainingSize)
-                binding.tvProNum.text = size
-                binding.tvUnit.text = unit
-
-                if (remainingSize == 0L) {
-                    binding.butClean.visibility = View.GONE
-                    // 恢复原始背景
-                    binding.imgBg.setImageResource(R.drawable.bj)
-                }
-
-                setResult(RESULT_OK)
-                // 可以选择是否返回主界面，或者让用户继续扫描
-                // finish()
-            }
-            .setCancelable(false)
-            .show()
+        startActivity(Intent(this, ScanLoadActivity::class.java))
+        finish()
     }
 
     override fun onDestroy() {

@@ -12,7 +12,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <!-- 顶部蓝色扫描区域 -->
         <ImageView
             android:id="@+id/img_bg"
             android:layout_width="match_parent"
@@ -87,7 +86,6 @@
             app:trackStopIndicatorSize="0dp"
             app:trackThickness="4dp" />
 
-        <!-- 底部白色扫描结果区域 -->
         <ScrollView
             android:id="@+id/scroll_results"
             android:layout_width="match_parent"
@@ -549,13 +547,13 @@
             android:layout_width="match_parent"
             android:layout_height="48dp"
             android:layout_marginHorizontal="48dp"
+            android:layout_marginBottom="24sp"
             android:insetTop="0dp"
             android:stateListAnimator="@null"
             android:text="Clean (0 B)"
             android:textAllCaps="false"
             android:visibility="gone"
             app:backgroundTint="#ED8103"
-            android:layout_marginBottom="24sp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:shapeAppearance="@style/ShapeAppearance.Material3.Corner.Full"
             tools:layout_editor_absoluteX="24dp" />
