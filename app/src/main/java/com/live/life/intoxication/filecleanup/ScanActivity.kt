@@ -98,26 +98,12 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
 
         binding.butClean.setOnClickListener {
             if (selectedFiles.isNotEmpty()) {
-                showDeleteConfirmDialog()
+                startCleaning()
             }
         }
 
         // 设置分类点击事件
         setupCategoryClickListeners()
-    }
-
-    private fun showDeleteConfirmDialog() {
-        val selectedSize = selectedFiles.sumOf { it.size }
-        val selectedCount = selectedFiles.size
-
-        AlertDialog.Builder(this)
-            .setTitle("Confirm deletion")
-            .setMessage("About to delete $selectedCount files, release ${formatFileSize(selectedSize)} space.\n\nThis operation cannot be undone, are you sure you want to continue?")
-            .setPositiveButton("Delete") { _, _ ->
-                startCleaning()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
     }
 
     private fun showCancelScanDialog() {
@@ -254,10 +240,6 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
                 result.logFiles,
                 result.adJunk,
                 result.tempFiles,
-                result.emptyFiles,
-                result.duplicateFiles,
-                result.largeFiles,
-                result.otherFiles
             ).flatten()
                 .filter { it.isSelected }
                 .forEach { selectedFiles.add(it) }
@@ -272,10 +254,6 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
             "Log Files" -> result.logFiles
             "AD Junk" -> result.adJunk
             "Temp Files" -> result.tempFiles
-            "Empty Files" -> result.emptyFiles
-            "Duplicate Files" -> result.duplicateFiles
-            "Large Files" -> result.largeFiles
-            "Other" -> result.otherFiles
             else -> emptyList()
         }
     }
@@ -520,10 +498,6 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
             "Log Files" to result.logFiles,
             "AD Junk" to result.adJunk,
             "Temp Files" to result.tempFiles,
-            "Empty Files" to result.emptyFiles,
-            "Duplicate Files" to result.duplicateFiles,
-            "Large Files" to result.largeFiles,
-            "Other" to result.otherFiles
         )
 
         allCategories.forEach { (categoryName, files) ->
@@ -562,10 +536,6 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         Log.d("ScanComplete", "Log Files: ${result.logFiles.size} files (${formatFileSize(result.logFiles.sumOf { it.size })})")
         Log.d("ScanComplete", "AD Junk: ${result.adJunk.size} files (${formatFileSize(result.adJunk.sumOf { it.size })})")
         Log.d("ScanComplete", "Temp Files: ${result.tempFiles.size} files (${formatFileSize(result.tempFiles.sumOf { it.size })})")
-        Log.d("ScanComplete", "Empty Files: ${result.emptyFiles.size} files (${formatFileSize(result.emptyFiles.sumOf { it.size })})")
-        Log.d("ScanComplete", "Duplicate Files: ${result.duplicateFiles.size} files (${formatFileSize(result.duplicateFiles.sumOf { it.size })})")
-        Log.d("ScanComplete", "Large Files: ${result.largeFiles.size} files (${formatFileSize(result.largeFiles.sumOf { it.size })})")
-        Log.d("ScanComplete", "Other Files: ${result.otherFiles.size} files (${formatFileSize(result.otherFiles.sumOf { it.size })})")
         Log.d("ScanComplete", "Selected files total: ${selectedFiles.size}")
         Log.d("ScanComplete", "Selected size total: ${formatFileSize(selectedFiles.sumOf { it.size })}")
         Log.d("ScanComplete", "===============================")
@@ -584,11 +554,6 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         binding.tvLogSize.text = formatFileSize(result.logFiles.sumOf { it.size })
         binding.tvAdSize.text = formatFileSize(result.adJunk.sumOf { it.size })
         binding.tvTempSize.text = formatFileSize(result.tempFiles.sumOf { it.size })
-
-        // binding.tvEmptyFilesSize?.text = formatFileSize(result.emptyFiles.sumOf { it.size })
-        // binding.tvDuplicateFilesSize?.text = formatFileSize(result.duplicateFiles.sumOf { it.size })
-        // binding.tvLargeFilesSize?.text = formatFileSize(result.largeFiles.sumOf { it.size })
-        // binding.tvOtherSize?.text = formatFileSize(result.otherFiles.sumOf { it.size })
     }
 
     private fun updateCleanButton() {
@@ -639,26 +604,9 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
     private fun startCleaning() {
         lifecycleScope.launch {
             try {
-                // 显示删除进度对话框
-                val progressDialog = AlertDialog.Builder(this@ScanActivity)
-                    .setTitle("Deleting files...")
-                    .setMessage("Deleting files, please wait...")
-                    .setCancelable(false)
-                    .create()
-
-                progressDialog.show()
-
-                // 执行删除操作
                 val (deletedCount, deletedSize) = FileScanner.deleteFiles(selectedFiles) { current, total ->
-                    runOnUiThread {
-                        progressDialog.setMessage("Deleting files... ($current/$total)")
-                    }
+
                 }
-
-                progressDialog.dismiss()
-
-                // 更新UI和显示结果
-                updateAfterDeletion()
                 showCleanResult(deletedCount, deletedSize)
 
             } catch (e: Exception) {
@@ -675,10 +623,6 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
             result.logFiles.removeAll { file -> !java.io.File(file.path).exists() }
             result.adJunk.removeAll { file -> !java.io.File(file.path).exists() }
             result.tempFiles.removeAll { file -> !java.io.File(file.path).exists() }
-            result.emptyFiles.removeAll { file -> !java.io.File(file.path).exists() }
-            result.duplicateFiles.removeAll { file -> !java.io.File(file.path).exists() }
-            result.largeFiles.removeAll { file -> !java.io.File(file.path).exists() }
-            result.otherFiles.removeAll { file -> !java.io.File(file.path).exists() }
         }
 
         // 从selectedFiles中移除已删除的文件
@@ -720,7 +664,7 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         AppDataTool.jumpType = 0
 
         // 设置删除结果信息
-        AppDataTool.cleanNum = "Deleted $deletedCount files, freed ${formatFileSize(deletedSize)}"
+        AppDataTool.cleanNum = "${formatFileSize(deletedSize)}"
 
         startActivity(Intent(this, ScanLoadActivity::class.java))
         finish()

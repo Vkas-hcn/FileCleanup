@@ -122,5 +122,7 @@
             app:layout_constraintEnd_toEndOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
-
+    <include
+        android:id="@+id/in_dialog"
+        layout="@layout/dialog_scan" />
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

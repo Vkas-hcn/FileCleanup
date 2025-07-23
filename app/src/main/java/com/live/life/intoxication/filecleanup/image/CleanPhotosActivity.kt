@@ -13,13 +13,17 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import com.live.life.intoxication.filecleanup.AppDataTool
 import com.live.life.intoxication.filecleanup.R
 import com.live.life.intoxication.filecleanup.databinding.ActivityImageBinding
 import com.live.life.intoxication.filecleanup.one.ScanLoadActivity
+import com.live.life.intoxication.filecleanup.one.ScanResultActivity
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -29,6 +33,7 @@ class CleanPhotosActivity : AppCompatActivity() {
     private lateinit var photoAdapter: PhotoListAdapter
     private val photoGroups = mutableListOf<PhotoDateGroup>()
     private var isAllSelected = false
+    var progressJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,10 +48,33 @@ class CleanPhotosActivity : AppCompatActivity() {
         }
 
         supportActionBar?.hide()
+        showScaningUi()
         setupBackPress()
         setupRecyclerView()
         setupClickListeners()
         loadPhotos()
+    }
+
+    fun showScaningUi(){
+        binding.inDialog.tvBack.setOnClickListener {
+            progressJob?.cancel()
+            finish()
+        }
+        binding.inDialog.scaning.setOnClickListener {
+        }
+        binding.inDialog.scaning.isVisible = true
+        var progress = 0
+        progressJob = lifecycleScope.launch {
+            while (true) {
+                progress++
+                binding.inDialog.pg.progress = progress
+                delay(20)
+                if (binding.inDialog.pg.progress >= 100) {
+                    binding.inDialog.scaning.isVisible = false
+                    break
+                }
+            }
+        }
     }
 
     private fun setupBackPress() {
@@ -186,15 +214,7 @@ class CleanPhotosActivity : AppCompatActivity() {
             Toast.makeText(this, "No photos selected", Toast.LENGTH_SHORT).show()
             return
         }
-
-        AlertDialog.Builder(this)
-            .setTitle("Delete Photos")
-            .setMessage("Are you sure you want to delete ${selectedPhotos.size} selected photos? This action cannot be undone.")
-            .setPositiveButton("Delete") { _, _ ->
-                deleteSelectedPhotos(selectedPhotos)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        deleteSelectedPhotos(selectedPhotos)
     }
 
     private fun deleteSelectedPhotos(photosToDelete: List<PhotoItem>) {

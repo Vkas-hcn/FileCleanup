@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.live.life.intoxication.filecleanup.AppDataTool
@@ -22,6 +23,8 @@ import com.live.life.intoxication.filecleanup.R
 import com.live.life.intoxication.filecleanup.databinding.ActivityFileBinding
 import com.live.life.intoxication.filecleanup.one.ScanLoadActivity
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -41,20 +44,41 @@ class CleanFileActivity : AppCompatActivity() {
     private var currentSizeFilter = FilterSize.ALL
     private var currentTimeFilter = FilterTime.ALL
 
+    var progressJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         binding = ActivityFileBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
+        showScaningUi()
         setupWindowInsets()
         setupActionBar()
         setupRecyclerView()
         setupClickListeners()
         scanFiles()
     }
-
+    fun showScaningUi(){
+        binding.inDialog.tvBack.setOnClickListener {
+            progressJob?.cancel()
+            finish()
+        }
+        binding.inDialog.scaning.setOnClickListener {
+        }
+        binding.inDialog.scaning.isVisible = true
+        var progress = 0
+        progressJob = lifecycleScope.launch {
+            while (true) {
+                progress++
+                binding.inDialog.pg.progress = progress
+                delay(20)
+                if (binding.inDialog.pg.progress >= 100) {
+                    binding.inDialog.scaning.isVisible = false
+                    break
+                }
+            }
+        }
+    }
     private fun setupWindowInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.file)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())

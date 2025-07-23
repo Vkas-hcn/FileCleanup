@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:id="@+id/load"
+    android:id="@+id/scaning"
+    android:visibility="gone"
     android:background="@color/white"
     android:fitsSystemWindows="true">
 
@@ -19,7 +20,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:padding="16dp"
+            android:layout_marginStart="16dp"
             android:drawablePadding="8dp"
             android:drawableStart="@drawable/icon_back"
             app:layout_constraintStart_toStartOf="parent"
@@ -72,7 +73,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Cleaning…"
+            android:text="Scaning…"
             android:textColor="#FF606060"
             android:textSize="16sp"
             android:layout_marginTop="24dp"

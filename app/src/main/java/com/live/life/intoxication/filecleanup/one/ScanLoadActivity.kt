@@ -35,8 +35,6 @@ class ScanLoadActivity : AppCompatActivity() {
             insets
         }
         this.supportActionBar?.hide()
-        onBackPressedDispatcher.addCallback {
-        }
         showLogoType()
         binding.tvBack.setOnClickListener {
             progressJob?.cancel()

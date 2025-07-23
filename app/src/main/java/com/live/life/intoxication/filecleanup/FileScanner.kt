@@ -14,27 +14,20 @@ class FileScanner(private val context: Context) {
         val logFiles: MutableList<JunkFile> = mutableListOf(),
         val adJunk: MutableList<JunkFile> = mutableListOf(),
         val tempFiles: MutableList<JunkFile> = mutableListOf(),
-        val emptyFiles: MutableList<JunkFile> = mutableListOf(),
-        val duplicateFiles: MutableList<JunkFile> = mutableListOf(),
-        val largeFiles: MutableList<JunkFile> = mutableListOf(),
-        val otherFiles: MutableList<JunkFile> = mutableListOf()
+
     ) {
         fun getTotalSize(): Long {
             return appCache.sumOf { it.size } +
                     apkFiles.sumOf { it.size } +
                     logFiles.sumOf { it.size } +
                     adJunk.sumOf { it.size } +
-                    tempFiles.sumOf { it.size } +
-                    emptyFiles.sumOf { it.size } +
-                    duplicateFiles.sumOf { it.size } +
-                    largeFiles.sumOf { it.size } +
-                    otherFiles.sumOf { it.size }
+                    tempFiles.sumOf { it.size }
+
         }
 
         fun getTotalCount(): Int {
             return appCache.size + apkFiles.size + logFiles.size +
-                    adJunk.size + tempFiles.size + emptyFiles.size +
-                    duplicateFiles.size + largeFiles.size + otherFiles.size
+                    adJunk.size + tempFiles.size
         }
     }
 
@@ -480,7 +473,7 @@ class FileScanner(private val context: Context) {
 
         // 收集所有文件按大小分组
         val allFiles = result.appCache + result.apkFiles + result.logFiles +
-                result.adJunk + result.tempFiles + result.otherFiles
+                result.adJunk + result.tempFiles
 
         allFiles.forEach { file ->
             if (file.size > 1024) { // 只检查大于1KB的文件
@@ -488,22 +481,7 @@ class FileScanner(private val context: Context) {
             }
         }
 
-        // 找出可能的重复文件
-        sizeGroupMap.values.forEach { filesWithSameSize ->
-            if (filesWithSameSize.size > 1) {
-                // 按名称进一步分组
-                val nameGroups = filesWithSameSize.groupBy { it.name }
-                nameGroups.values.forEach { sameNameFiles ->
-                    if (sameNameFiles.size > 1) {
-                        // 保留最新的文件，其他标记为重复
-                        val sortedFiles = sameNameFiles.sortedByDescending { it.lastModified }
-                        sortedFiles.drop(1).forEach { duplicateFile ->
-                            result.duplicateFiles.add(duplicateFile.copy(category = "Duplicate Files"))
-                        }
-                    }
-                }
-            }
-        }
+
     }
 
     private fun calculateFileHash(file: File): String? {
@@ -527,10 +505,6 @@ class FileScanner(private val context: Context) {
             "Log Files" -> result.logFiles.add(junkFile)
             "AD Junk" -> result.adJunk.add(junkFile)
             "Temp Files" -> result.tempFiles.add(junkFile)
-            "Empty Files" -> result.emptyFiles.add(junkFile)
-            "Duplicate Files" -> result.duplicateFiles.add(junkFile)
-            "Large Files" -> result.largeFiles.add(junkFile)
-            "Other" -> result.otherFiles.add(junkFile)
         }
     }
 

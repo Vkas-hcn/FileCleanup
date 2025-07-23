@@ -13,16 +13,15 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:text="Today"
-        android:textColor="@color/black"
-        android:textSize="18sp"
-        android:textStyle="bold" />
+        android:textColor="#FF999999"
+        android:textSize="14sp"/>
 
     <TextView
         android:id="@+id/tv_count"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="10 items"
-        android:textColor="@color/gray"
+        android:textColor="#FF999999"
         android:textSize="14sp"
         android:layout_marginEnd="16dp" />
 
