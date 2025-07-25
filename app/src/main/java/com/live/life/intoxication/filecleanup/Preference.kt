@@ -9,54 +9,42 @@ class Preference(context: Context, private val name: String = "default", private
 
     private val preferences: SharedPreferences = context.getSharedPreferences(name, mode)
 
-    /**
-     * Boolean 类型的委托属性
-     */
+
     fun boolean(default: Boolean = false): ReadWriteProperty<Any?, Boolean> =
         object : PreferenceDelegate<Boolean>(default) {
             override fun getValueFromPreferences(key: String): Boolean = preferences.getBoolean(key, default)
             override fun setValueToPreferences(key: String, value: Boolean) = preferences.edit().putBoolean(key, value).apply()
         }
 
-    /**
-     * Int 类型的委托属性
-     */
+
     fun int(default: Int = 0): ReadWriteProperty<Any?, Int> =
         object : PreferenceDelegate<Int>(default) {
             override fun getValueFromPreferences(key: String): Int = preferences.getInt(key, default)
             override fun setValueToPreferences(key: String, value: Int) = preferences.edit().putInt(key, value).apply()
         }
 
-    /**
-     * Long 类型的委托属性
-     */
+
     fun long(default: Long = 0L): ReadWriteProperty<Any?, Long> =
         object : PreferenceDelegate<Long>(default) {
             override fun getValueFromPreferences(key: String): Long = preferences.getLong(key, default)
             override fun setValueToPreferences(key: String, value: Long) = preferences.edit().putLong(key, value).apply()
         }
 
-    /**
-     * Float 类型的委托属性
-     */
+
     fun float(default: Float = 0f): ReadWriteProperty<Any?, Float> =
         object : PreferenceDelegate<Float>(default) {
             override fun getValueFromPreferences(key: String): Float = preferences.getFloat(key, default)
             override fun setValueToPreferences(key: String, value: Float) = preferences.edit().putFloat(key, value).apply()
         }
 
-    /**
-     * String 类型的委托属性
-     */
+
     fun string(default: String = ""): ReadWriteProperty<Any?, String> =
         object : PreferenceDelegate<String>(default) {
             override fun getValueFromPreferences(key: String): String = preferences.getString(key, default) ?: default
             override fun setValueToPreferences(key: String, value: String) = preferences.edit().putString(key, value).apply()
         }
 
-    /**
-     * 用于实现属性委托的抽象类
-     */
+
     private abstract class PreferenceDelegate<T>(private val defaultValue: T) : ReadWriteProperty<Any?, T> {
         abstract fun getValueFromPreferences(key: String): T
         abstract fun setValueToPreferences(key: String, value: T)

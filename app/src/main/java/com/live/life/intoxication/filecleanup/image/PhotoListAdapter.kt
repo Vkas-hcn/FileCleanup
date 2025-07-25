@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
+import com.live.life.intoxication.filecleanup.App
 import com.live.life.intoxication.filecleanup.R
 import java.text.SimpleDateFormat
 import java.util.*
@@ -114,7 +115,7 @@ class PhotoListAdapter(
         private val tvSize: TextView = itemView.findViewById(R.id.tv_size)
 
         fun bind(photo: PhotoItem, group: PhotoDateGroup) {
-            Glide.with(itemView.context)
+            Glide.with(App.instance)
                 .load(photo.path)
                 .centerCrop()
                 .diskCacheStrategy(DiskCacheStrategy.RESOURCE)

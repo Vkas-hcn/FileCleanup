@@ -328,13 +328,13 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         // 根据文件类型显示不同的路径信息
         when (categoryName) {
             "Large Files" -> {
-                tvFilePath.text = "${file.path}\n修改时间: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date(file.lastModified))}"
+                tvFilePath.text = "${file.path}\nModification time: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date(file.lastModified))}"
             }
             "Duplicate Files" -> {
-                tvFilePath.text = "${file.path}\n(重复文件)"
+                tvFilePath.text = "${file.path}\n(Duplicate files)"
             }
             "Empty Files" -> {
-                tvFilePath.text = "${file.path}\n(空文件)"
+                tvFilePath.text = "${file.path}\n(Empty file)"
             }
             else -> {
                 tvFilePath.text = file.path
@@ -344,28 +344,20 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         tvFileSize.text = formatFileSize(file.size)
         ivFileStatus.setImageResource(if (file.isSelected) R.drawable.ic_check else R.drawable.ic_check_circle)
 
-        // 为大文件添加特殊颜色标识
         if (categoryName == "Large Files" && file.size > 200 * 1024 * 1024) {
             tvFileSize.setTextColor(resources.getColor(android.R.color.holo_red_dark, null))
         }
 
         itemView.setOnClickListener {
-            Log.d("FileClick", "Clicked file: ${file.name} (current selected: ${file.isSelected})")
-
-            // 直接切换文件选中状态
             file.isSelected = !file.isSelected
 
-            // 同步更新分类选中状态
             updateCategorySelectionStatus(categoryName)
 
-            // 重新计算所有选中文件
             recalculateSelectedFiles()
 
-            // 更新UI
             ivFileStatus.setImageResource(if (file.isSelected) R.drawable.ic_check else R.drawable.ic_check_circle)
             updateCleanButton()
 
-            Log.d("FileClick", "After click - selectedFiles size: ${selectedFiles.size}")
         }
 
         return itemView
@@ -376,21 +368,14 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         val selectedCount = categoryFiles.count { it.isSelected }
         val totalCount = categoryFiles.size
 
-        // 更新分类选中状态
         categorySelectStates[categoryName] = selectedCount == totalCount
 
-        // 更新分类选中图标
         val statusIcon = when (categoryName) {
             "App Cache" -> binding.ivAppCacheStatus
             "Apk Files" -> binding.ivAppFileStatus
             "Log Files" -> binding.ivLogFileStatus
             "AD Junk" -> binding.ivAdJunkStatus
             "Temp Files" -> binding.ivTempFilesStatus
-            // 新增分类的图标需要根据实际的UI元素来设置
-            // "Empty Files" -> binding.ivEmptyFilesStatus
-            // "Duplicate Files" -> binding.ivDuplicateFilesStatus
-            // "Large Files" -> binding.ivLargeFilesStatus
-            // "Other" -> binding.ivOtherStatus
             else -> null
         }
 
@@ -407,11 +392,9 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         binding.tvProNum.text = "0"
         binding.tvUnit.text = "MB"
 
-        // 清空之前的状态
         selectedFiles.clear()
         scanResult = FileScanner.ScanResult()
 
-        // 重置分类大小显示
         binding.tvAppCacheSize.text = "0MB"
         binding.tvApkSize.text = "0MB"
         binding.tvLogSize.text = "0MB"
@@ -423,7 +406,6 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
                 scanResult = fileScanner.startScan(this@ScanActivity)
                 withContext(Dispatchers.Main) {
                     updateCategorySizes()
-                    // 更新所有分类的选中状态图标
                     updateAllCategoryIcons()
                 }
             } catch (e: Exception) {
@@ -449,11 +431,6 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
             if (categorySelectStates["Temp Files"] == true) R.drawable.ic_check else R.drawable.ic_check_circle
         )
 
-        // 新增分类的图标更新
-        // binding.ivEmptyFilesStatus?.setImageResource(...)
-        // binding.ivDuplicateFilesStatus?.setImageResource(...)
-        // binding.ivLargeFilesStatus?.setImageResource(...)
-        // binding.ivOtherStatus?.setImageResource(...)
     }
 
     private fun cancelScanning() {
@@ -463,17 +440,14 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         binding.linScan.visibility = View.GONE
     }
 
-    // FileScanner.ScanProgressCallback 实现
     override fun onProgressUpdate(currentPath: String, scannedFiles: Int, foundJunk: Int) {
         val shortPath = currentPath.substringAfterLast("/").take(30)
         binding.tvFile.text = "Scanning: $shortPath"
 
-        // 实时更新已找到的垃圾文件数量
         binding.tvProNum.text = foundJunk.toString()
     }
 
     override fun onCategoryUpdate(category: String, files: List<FileScanner.JunkFile>) {
-        // 实时更新分类大小 - 每当有新文件被分类时调用
         runOnUiThread {
             updateCategorySizes()
         }
@@ -489,9 +463,7 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         // 清空选中文件集合
         selectedFiles.clear()
 
-        Log.d("ScanComplete", "Initializing selected files...")
 
-        // 根据分类选中状态来初始化selectedFiles和文件的isSelected状态
         val allCategories = listOf(
             "App Cache" to result.appCache,
             "Apk Files" to result.apkFiles,
@@ -517,29 +489,14 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
             binding.butClean.visibility = View.VISIBLE
         }
 
-        // 更新总垃圾显示
         val (size, unit) = formatFileSizeParts(totalSize)
         binding.tvProNum.text = size
         binding.tvUnit.text = unit
 
         updateCategorySizes()
         updateCleanButton()
-        // 详细的调试日志
-        logScanResults(result)
     }
 
-    private fun logScanResults(result: FileScanner.ScanResult) {
-        Log.d("ScanComplete", "=== Enhanced Scan Complete Summary ===")
-        Log.d("ScanComplete", "Total files found: ${result.getTotalCount()}")
-        Log.d("ScanComplete", "App Cache: ${result.appCache.size} files (${formatFileSize(result.appCache.sumOf { it.size })})")
-        Log.d("ScanComplete", "Apk Files: ${result.apkFiles.size} files (${formatFileSize(result.apkFiles.sumOf { it.size })})")
-        Log.d("ScanComplete", "Log Files: ${result.logFiles.size} files (${formatFileSize(result.logFiles.sumOf { it.size })})")
-        Log.d("ScanComplete", "AD Junk: ${result.adJunk.size} files (${formatFileSize(result.adJunk.sumOf { it.size })})")
-        Log.d("ScanComplete", "Temp Files: ${result.tempFiles.size} files (${formatFileSize(result.tempFiles.sumOf { it.size })})")
-        Log.d("ScanComplete", "Selected files total: ${selectedFiles.size}")
-        Log.d("ScanComplete", "Selected size total: ${formatFileSize(selectedFiles.sumOf { it.size })}")
-        Log.d("ScanComplete", "===============================")
-    }
 
     override fun onError(error: String) {
         isScanning = false
@@ -563,7 +520,6 @@ class ScanActivity : AppCompatActivity(), FileScanner.ScanProgressCallback {
         binding.butClean.text = buttonText
         binding.butClean.isEnabled = selectedFiles.isNotEmpty()
         AppDataTool.cleanNum = buttonText
-        Log.d("CleanButton", "updateCleanButton: $selectedCount files, ${formatFileSize(selectedSize)}")
     }
 
     private fun formatFileSize(bytes: Long): String {

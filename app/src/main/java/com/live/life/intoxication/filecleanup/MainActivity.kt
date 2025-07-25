@@ -70,9 +70,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * 获取设备总存储空间（更准确的方法）
-     */
+
     private fun getTotalStorageSpace(): Long {
         return try {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR2) {
@@ -104,9 +102,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * 获取可用存储空间
-     */
+
     private fun getAvailableStorageSpace(): Long {
         return try {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {

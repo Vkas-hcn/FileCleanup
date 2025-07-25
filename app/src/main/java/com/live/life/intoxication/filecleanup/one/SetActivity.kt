@@ -24,8 +24,7 @@ class SetActivity : AppCompatActivity() {
 
     companion object {
         fun jumpToActive(activity: AppCompatActivity) {
-            //TODO: 2023/5/23 跳转网页
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://google.com"))
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://sites.google.com/view/neat-cleaner-/home"))
             activity.startActivity(intent)
         }
     }
